@@ -11,10 +11,12 @@ namespace Api.Controllers;
 public class PedidosController : ControllerBase
 {
     private readonly IPedidoQueries queries;
+    private readonly IPedidoDapperQueries dapperQueries;
 
-    public PedidosController(IPedidoQueries queries)
+    public PedidosController(IPedidoQueries queries, IPedidoDapperQueries dapperQueries)
     {
         this.queries = queries;
+        this.dapperQueries = dapperQueries;
     }
 
     /// <summary>
@@ -35,6 +37,18 @@ public class PedidosController : ControllerBase
         [FromQuery] int pageSize = 20,
         [FromQuery] StatusPedido? status = null)
         => Ok(await queries.GetFastAsync(lastId, pageSize, status));
+
+    /// <summary>
+    /// Mesma consulta otimizada do /fast, mas via Dapper/SQL puro — comparar com /fast para ver o
+    /// overhead de tracking/materialização do EF Core mesmo numa query já otimizada.
+    /// </summary>
+    [HttpGet("fast-dapper")]
+    [ProducesResponseType(typeof(List<PedidoFastModel>), StatusCodes.Status200OK)]
+    public async Task<ActionResult<List<PedidoFastModel>>> GetFastDapper(
+        [FromQuery] long? lastId = null,
+        [FromQuery] int pageSize = 20,
+        [FromQuery] StatusPedido? status = null)
+        => Ok(await dapperQueries.GetFastAsync(lastId, pageSize, status));
 
     /// <summary>
     /// Compara slow vs fast, medindo tempo de execução e logical reads (SET STATISTICS IO) para a mesma carga.

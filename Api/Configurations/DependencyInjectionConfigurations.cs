@@ -19,6 +19,7 @@ public static class DependencyInjectionConfigurations
         services.AddScoped<IPedidoRepository, PedidoRepository>();
         services.AddScoped<IClienteRepository, ClienteRepository>();
         services.AddScoped<IPedidoQueries, PedidoQueries>();
+        services.AddScoped<IPedidoDapperQueries, PedidoDapperQueries>();
 
         return services;
     }
