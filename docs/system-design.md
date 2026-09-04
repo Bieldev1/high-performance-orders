@@ -11,60 +11,54 @@ graph TB
 
     subgraph Api["Api (ASP.NET Core Web API)"]
         Ctrl["Controllers"]
-        App["Application<br/>(Commands / Queries / Models)"]
+        App["Application<br/>(Queries / Models)"]
         Cfg["Configurations<br/>(DI, Swagger)"]
     end
 
     subgraph Domain["Domain (sem dependências externas)"]
         Agg["AggregatesModel<br/>PedidoAggregate / ClienteAggregate"]
-        Seed["SeedWork<br/>Entity, IAggregateRoot, IUnitOfWork"]
-        Repo["Repositories<br/>IPedidoRepository, IClienteRepository"]
-        Result["Common/Results<br/>Result, Result&lt;T&gt;"]
+        Seed["SeedWork<br/>Entity, IAggregateRoot"]
     end
 
     subgraph Infra["Infrastructure (EF Core)"]
         Ctx["AppDbContext"]
-        Maps["EntityConfigurations<br/>(Fluent API + índices)"]
-        RepoImpl["Repositories<br/>(BaseRepository)"]
-        UoW["UnitOfWork"]
+        Maps["EntityConfigurations<br/>(Fluent API, sem índices de performance)"]
     end
 
     subgraph DB["SQL Server"]
         Tabelas["Pedidos / ItensPedido / Clientes"]
-        Indices["Índices compostos + covering index"]
+        Indices["Índices compostos + covering index<br/>(SQL puro, database/scripts)"]
     end
 
     HTTP --> Ctrl
     SW --> Ctrl
     Ctrl --> App
-    App --> Agg
-    App --> Repo
-    Cfg -.registra.-> RepoImpl
-    Cfg -.registra.-> Ctx
-    Cfg -.registra.-> UoW
+    App --> Ctx
 
-    RepoImpl -.implementa.-> Repo
-    RepoImpl --> Ctx
-    UoW --> Ctx
+    Cfg -.registra.-> Ctx
+    Cfg -.registra.-> App
+
     Ctx --> Maps
     Maps --> Tabelas
     Ctx --> DB
     Tabelas --> Indices
 
     Agg --> Seed
-    Agg --> Result
 ```
 
 ## Princípios seguidos
 
-- **Domain independente**: não referencia EF Core, ASP.NET ou qualquer pacote externo — só `Repositories`/`SeedWork`/`Common` definidos internamente.
-- **Infrastructure conhece o Domain, não o contrário**: `Infrastructure` implementa as interfaces (`IPedidoRepository`, `IUnitOfWork`) definidas em `Domain`.
-- **Api orquestra**: Controllers finos, lógica de aplicação em `Application/Commands` e `Application/Queries`, DI centralizado em `Configurations`.
-- **Leitura de alta performance não passa pelo Repository genérico**: os endpoints `slow`/`fast`/`benchmark` (próxima etapa) consultam o `AppDbContext` diretamente via `IQueryable`, para ter controle total de projeção, `AsNoTracking` e paginação — ver [index-strategy.md](index-strategy.md) quando criado.
+- **Domain independente**: não referencia EF Core, ASP.NET ou qualquer pacote externo — só `AggregatesModel`/`SeedWork` definidos internamente.
+- **Api orquestra**: Controllers finos, lógica de leitura em `Application/Queries`, DI centralizado em `Configurations`.
+- **Leitura de alta performance não passa por Repository genérico**: os endpoints `slow`/`fast`/`fast-dapper`/`benchmark` consultam o `AppDbContext` (ou SQL puro via Dapper) diretamente via `IQueryable`, para ter controle total de projeção, `AsNoTracking` e paginação — ver [index-strategy.md](index-strategy.md).
+- **Sem abstração sem uso real**: este projeto chegou a ter `Repository`/`UnitOfWork`/`Result Pattern` no Domain/Infrastructure (padrão do `develop-flow`), mas como nenhum Command de escrita foi implementado, essas camadas nunca eram chamadas — foram removidas. Se/quando um endpoint de escrita (criar Pedido/Cliente) for implementado, essas peças voltam a fazer sentido, mas só quando houver uso real, não antes.
 
-## Fluxo de uma requisição de escrita (ex: criar Pedido)
+## O que existe hoje
 
-1. `Controller` recebe o request e delega para um `Command`/`Handler` em `Api/Application/Commands`.
-2. O handler usa `IPedidoRepository`/`IClienteRepository` (Domain) para manipular agregados e retorna `Result`/`Result<T>`.
-3. `IUnitOfWork.SaveChangesAsync` persiste as mudanças via `AppDbContext`.
-4. O Controller traduz o `Result` em uma resposta HTTP (200/400/422/500).
+Como o projeto é só leitura (endpoints de estudo de performance), o fluxo é direto:
+
+1. `Controller` recebe o request e delega pra uma classe de `Application/Queries` (`IPedidoQueries` via EF Core, ou `IPedidoDapperQueries` via SQL puro).
+2. A Query consulta `AppDbContext`/`SqlConnection` diretamente, projeta o resultado num Model (`Api/Application/Models`) e devolve.
+3. O Controller retorna o Model como resposta HTTP.
+
+Não há camada de escrita/Command neste projeto ainda.

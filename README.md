@@ -19,23 +19,24 @@ HighPerformanceOrders.sln
 ├── Api/
 │   ├── Controllers/
 │   ├── Application/
-│   │   ├── Commands/
 │   │   ├── Queries/          (PedidoQueries, PedidoDapperQueries)
 │   │   └── Models/           (Models de request/response, sufixo *Model)
 │   └── Configurations/       (DI, Swagger)
 ├── Domain/                   (sem dependências externas)
 │   ├── AggregatesModel/      (PedidoAggregate, ClienteAggregate)
-│   ├── SeedWork/             (Entity, IAggregateRoot, IUnitOfWork)
-│   ├── Repositories/
-│   └── Common/Results/       (Result, Result<T>)
+│   └── SeedWork/             (Entity, IAggregateRoot)
 └── Infrastructure/
-    ├── Data/                 (AppDbContext, EntityConfigurations, UnitOfWork)
-    ├── Repositories/
+    ├── Data/                 (AppDbContext, EntityConfigurations)
     └── Migrations/
 
 database/scripts/             (schema + índices + seed + queries de estudo, em SQL puro)
 docs/                         (system design, benchmarks, estratégia de índices, conceitos)
 ```
+
+> Este projeto é só leitura (endpoints de estudo de performance) — por isso não há
+> `Repository`/`UnitOfWork`/`Command`/`Result Pattern`: essas camadas existiram numa
+> versão anterior mas foram removidas por não terem uso real (nenhum endpoint de escrita
+> foi implementado). Ver [docs/system-design.md](docs/system-design.md).
 
 Detalhes da arquitetura e o raciocínio por trás das decisões: [docs/system-design.md](docs/system-design.md).
 
