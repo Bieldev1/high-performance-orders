@@ -1,4 +1,18 @@
 services:
+  api:
+    build:
+      context: .
+      dockerfile: Api/Dockerfile
+    container_name: hpo-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=HighPerformanceOrders;User Id=sa;Password=Your_password123;TrustServerCertificate=True;"
+    ports:
+      - "8080:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+
   sqlserver:
     image: mcr.microsoft.com/mssql/server:2022-latest
     container_name: hpo-sqlserver
