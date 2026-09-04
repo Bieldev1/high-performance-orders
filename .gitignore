@@ -1,0 +1,25 @@
+## .NET
+bin/
+obj/
+out/
+*.user
+*.suo
+.vs/
+
+## Rider / VS Code
+.idea/
+.vscode/
+
+## Logs
+*.log
+
+## OS
+.DS_Store
+Thumbs.db
+
+## EF Core
+*.mdf
+*.ldf
+
+## Docker
+.env
