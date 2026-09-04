@@ -7,9 +7,12 @@ GO
 
 SET NOCOUNT ON;
 
+-- Pedidos não pode ser truncado diretamente (FK de ItensPedido aponta pra ele mesmo vazio),
+-- por isso usamos DELETE + reseed manual da identity.
 TRUNCATE TABLE ItensPedido;
 DELETE FROM Pedidos;
-DELETE FROM Clientes;
+DBCC CHECKIDENT ('Pedidos', RESEED, 0);
+TRUNCATE TABLE Clientes;
 GO
 
 -- Tabela auxiliar de números, usada para gerar N linhas via CROSS JOIN.

@@ -1,3 +1,4 @@
+using Api.Application.Queries.Pedidos;
 using Domain.AggregatesModel.ClienteAggregate;
 using Domain.AggregatesModel.PedidoAggregate;
 using Domain.SeedWork;
@@ -17,6 +18,7 @@ public static class DependencyInjectionConfigurations
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<IPedidoRepository, PedidoRepository>();
         services.AddScoped<IClienteRepository, ClienteRepository>();
+        services.AddScoped<IPedidoQueries, PedidoQueries>();
 
         return services;
     }
