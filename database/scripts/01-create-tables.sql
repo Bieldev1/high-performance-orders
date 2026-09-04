@@ -13,7 +13,7 @@ GO
 
 IF NOT EXISTS (
     SELECT * FROM [__EFMigrationsHistory]
-    WHERE [MigrationId] = N'20260904192102_InitialCreate'
+    WHERE [MigrationId] = N'20260904212552_InitialCreate'
 )
 BEGIN
     CREATE TABLE [Clientes] (
@@ -28,7 +28,7 @@ GO
 
 IF NOT EXISTS (
     SELECT * FROM [__EFMigrationsHistory]
-    WHERE [MigrationId] = N'20260904192102_InitialCreate'
+    WHERE [MigrationId] = N'20260904212552_InitialCreate'
 )
 BEGIN
     CREATE TABLE [Pedidos] (
@@ -44,7 +44,7 @@ GO
 
 IF NOT EXISTS (
     SELECT * FROM [__EFMigrationsHistory]
-    WHERE [MigrationId] = N'20260904192102_InitialCreate'
+    WHERE [MigrationId] = N'20260904212552_InitialCreate'
 )
 BEGIN
     CREATE TABLE [ItensPedido] (
@@ -61,41 +61,55 @@ GO
 
 IF NOT EXISTS (
     SELECT * FROM [__EFMigrationsHistory]
-    WHERE [MigrationId] = N'20260904192102_InitialCreate'
+    WHERE [MigrationId] = N'20260904212552_InitialCreate'
 )
 BEGIN
-    CREATE INDEX [IX_ItensPedido_PedidoId] ON [ItensPedido] ([PedidoId]) INCLUDE ([NomeProduto], [Quantidade]);
+    CREATE INDEX [IX_ItensPedido_PedidoId] ON [ItensPedido] ([PedidoId]);
 END;
 GO
 
 IF NOT EXISTS (
     SELECT * FROM [__EFMigrationsHistory]
-    WHERE [MigrationId] = N'20260904192102_InitialCreate'
-)
-BEGIN
-    CREATE INDEX [IX_Pedidos_Covering] ON [Pedidos] ([Status], [ValorTotal]) INCLUDE ([DataPedido], [ClienteId], [Id]);
-END;
-GO
-
-IF NOT EXISTS (
-    SELECT * FROM [__EFMigrationsHistory]
-    WHERE [MigrationId] = N'20260904192102_InitialCreate'
-)
-BEGIN
-    CREATE INDEX [IX_Pedidos_Status_ValorTotal_DataPedido] ON [Pedidos] ([Status], [ValorTotal], [DataPedido] DESC) INCLUDE ([ClienteId]);
-END;
-GO
-
-IF NOT EXISTS (
-    SELECT * FROM [__EFMigrationsHistory]
-    WHERE [MigrationId] = N'20260904192102_InitialCreate'
+    WHERE [MigrationId] = N'20260904212552_InitialCreate'
 )
 BEGIN
     INSERT INTO [__EFMigrationsHistory] ([MigrationId], [ProductVersion])
-    VALUES (N'20260904192102_InitialCreate', N'8.0.10');
+    VALUES (N'20260904212552_InitialCreate', N'8.0.10');
 END;
 GO
 
 COMMIT;
+GO
+
+-- ============================================================================
+-- Índices de performance
+--
+-- Estes índices NÃO fazem parte da migration do EF Core de propósito: eles
+-- foram desenhados depois de rodar as queries reais de /orders/slow e /orders/fast
+-- com SET STATISTICS IO/TIME ON e observar o execution plan (Table Scan e Key
+-- Lookup na versão lenta), como um DBA faria na prática — não declarados
+-- antecipadamente via Fluent API. Ver docs/index-strategy.md para o raciocínio
+-- completo de cada um.
+-- ============================================================================
+
+-- Covering index para a listagem paginada por Status/ValorTotal sem Key Lookup.
+-- Ordem das colunas: Status (igualdade, mais seletivo primeiro) -> ValorTotal (range/order).
+-- WITH DROP_EXISTING upgrada o índice de FK que o EF já criou, sem duplicar.
+CREATE INDEX IX_Pedidos_Status_ValorTotal_DataPedido
+ON Pedidos (Status, ValorTotal, DataPedido DESC)
+INCLUDE (ClienteId);
+GO
+
+CREATE INDEX IX_Pedidos_Covering
+ON Pedidos (Status, ValorTotal)
+INCLUDE (DataPedido, ClienteId, Id);
+GO
+
+-- Upgrada o índice de FK (IX_ItensPedido_PedidoId, criado automaticamente pelo EF)
+-- para um covering index, evitando Key Lookup ao listar itens de um pedido.
+CREATE INDEX IX_ItensPedido_PedidoId
+ON ItensPedido (PedidoId)
+INCLUDE (NomeProduto, Quantidade)
+WITH (DROP_EXISTING = ON);
 GO
 

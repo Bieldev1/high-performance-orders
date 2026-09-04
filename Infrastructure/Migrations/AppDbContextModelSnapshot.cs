@@ -78,10 +78,7 @@ namespace Infrastructure.Migrations
 
                     b.HasKey("Id");
 
-                    b.HasIndex("PedidoId")
-                        .HasDatabaseName("IX_ItensPedido_PedidoId");
-
-                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("PedidoId"), new[] { "NomeProduto", "Quantidade" });
+                    b.HasIndex("PedidoId");
 
                     b.ToTable("ItensPedido", (string)null);
                 });
@@ -112,17 +109,6 @@ namespace Infrastructure.Migrations
                         .HasColumnName("ValorTotal");
 
                     b.HasKey("Id");
-
-                    b.HasIndex("Status", "ValorTotal")
-                        .HasDatabaseName("IX_Pedidos_Covering");
-
-                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("Status", "ValorTotal"), new[] { "DataPedido", "ClienteId", "Id" });
-
-                    b.HasIndex("Status", "ValorTotal", "DataPedido")
-                        .IsDescending(false, false, true)
-                        .HasDatabaseName("IX_Pedidos_Status_ValorTotal_DataPedido");
-
-                    SqlServerIndexBuilderExtensions.IncludeProperties(b.HasIndex("Status", "ValorTotal", "DataPedido"), new[] { "ClienteId" });
 
                     b.ToTable("Pedidos", (string)null);
                 });

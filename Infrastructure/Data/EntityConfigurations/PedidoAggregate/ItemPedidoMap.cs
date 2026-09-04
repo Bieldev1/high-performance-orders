@@ -18,9 +18,6 @@ internal class ItemPedidoMap : IEntityTypeConfiguration<ItemPedido>
         builder.Property(it => it.Quantidade).HasColumnName("Quantidade").IsRequired();
         builder.Property(it => it.PrecoUnitario).HasColumnName("PrecoUnitario").HasColumnType("decimal(18,2)").IsRequired();
 
-        // Reflete o índice obrigatório da spec: IX_OrderItems_OrderId INCLUDE (ProductName, Quantity).
-        builder.HasIndex(it => it.PedidoId)
-            .HasDatabaseName("IX_ItensPedido_PedidoId")
-            .IncludeProperties(it => new { it.NomeProduto, it.Quantidade });
+        // Índice de performance criado via SQL puro em database/scripts/01-create-tables.sql, não aqui.
     }
 }

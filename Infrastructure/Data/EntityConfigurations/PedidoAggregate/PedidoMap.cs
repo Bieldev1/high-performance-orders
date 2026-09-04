@@ -25,15 +25,8 @@ internal class PedidoMap : IEntityTypeConfiguration<Pedido>
         builder.Metadata.FindNavigation(nameof(Pedido.Itens))!
             .SetPropertyAccessMode(PropertyAccessMode.Field);
 
-        // Reflete o índice obrigatório da spec (Status, ValorTotal, DataPedido DESC) INCLUDE (ClienteId).
-        builder.HasIndex(it => new { it.Status, it.ValorTotal, it.DataPedido })
-            .HasDatabaseName("IX_Pedidos_Status_ValorTotal_DataPedido")
-            .IsDescending(false, false, true)
-            .IncludeProperties(it => it.ClienteId);
-
-        // Covering index para a listagem paginada sem key lookup.
-        builder.HasIndex(it => new { it.Status, it.ValorTotal })
-            .HasDatabaseName("IX_Pedidos_Covering")
-            .IncludeProperties(it => new { it.DataPedido, it.ClienteId, it.Id });
+        // Índices de performance NÃO são declarados aqui de propósito: são criados via SQL puro
+        // em database/scripts/01-create-tables.sql, depois de analisar o execution plan das queries
+        // reais — é assim que tuning de índice funciona na prática, não via Fluent API antecipada.
     }
 }

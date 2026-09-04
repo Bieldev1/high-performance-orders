@@ -67,21 +67,7 @@ namespace Infrastructure.Migrations
             migrationBuilder.CreateIndex(
                 name: "IX_ItensPedido_PedidoId",
                 table: "ItensPedido",
-                column: "PedidoId")
-                .Annotation("SqlServer:Include", new[] { "NomeProduto", "Quantidade" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Pedidos_Covering",
-                table: "Pedidos",
-                columns: new[] { "Status", "ValorTotal" })
-                .Annotation("SqlServer:Include", new[] { "DataPedido", "ClienteId", "Id" });
-
-            migrationBuilder.CreateIndex(
-                name: "IX_Pedidos_Status_ValorTotal_DataPedido",
-                table: "Pedidos",
-                columns: new[] { "Status", "ValorTotal", "DataPedido" },
-                descending: new[] { false, false, true })
-                .Annotation("SqlServer:Include", new[] { "ClienteId" });
+                column: "PedidoId");
         }
 
         /// <inheritdoc />
