@@ -71,11 +71,14 @@ jobs:
           sudo ACCEPT_EULA=Y apt-get install -y mssql-tools18 unixodbc-dev
           echo "/opt/mssql-tools18/bin" >> "$GITHUB_PATH"
 
+      - name: Criar banco de dados
+        run: sqlcmd -S localhost -U sa -P 'Your_password123' -C -b -Q "CREATE DATABASE HighPerformanceOrders;"
+
       - name: Aplicar schema e índices
-        run: sqlcmd -S localhost -U sa -P 'Your_password123' -C -i database/scripts/01-create-tables.sql
+        run: sqlcmd -S localhost -U sa -P 'Your_password123' -C -b -d HighPerformanceOrders -i database/scripts/01-create-tables.sql
 
       - name: Seed de dados (versão reduzida para CI)
-        run: sqlcmd -S localhost -U sa -P 'Your_password123' -C -i database/scripts/02-seed-data-ci.sql
+        run: sqlcmd -S localhost -U sa -P 'Your_password123' -C -b -i database/scripts/02-seed-data-ci.sql
 
       - name: Restore dependências
         run: dotnet restore Tests/Tests.csproj
