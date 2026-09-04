@@ -76,6 +76,49 @@ por não ter custo de compilação de expression tree; (2) sob alta concorrênci
 pagar overhead de tracking/materialização de entidades (aqui já mitigado com
 `AsNoTracking`); (3) em código mais simples/direto para quem já conhece SQL.
 
+## `/api/pedidos/benchmark` com pageSize maior
+
+Rodando `/benchmark` com `pageSize` crescente (mesma base de 500k pedidos):
+
+| pageSize | Slow (ms) | Fast (ms) | Fator |
+|---|---|---|---|
+| 20 | ~180-4.200 | ~4-160 | ~15-45x |
+| 100 | 1.099 | 7 | ~157x |
+| 500 | 2.654 | 30 | ~88x |
+| 2.000 | 5.731 | 12 | ~477x |
+
+O **tempo** (`ExecutionTimeMs`, via `Stopwatch`) segue um padrão bem claro e confiável: o
+`slow` cresce quase linearmente com `pageSize`, porque cada pedido a mais na página soma
+2 round trips extras (N+1: um pro Cliente, um pros Itens). O `fast` fica sempre na casa
+de milissegundos de um dígito a dois, porque é uma única query bem indexada — o tempo não
+escala com `pageSize` na faixa testada.
+
+### Limitação conhecida: `LogicalReads` do endpoint `/benchmark`
+
+Diferente do tempo, o `LogicalReads` retornado por `/benchmark` **não é confiável** e não
+deve ser citado como métrica de I/O real. Nos mesmos testes acima, os valores saíram
+inconsistentes (2837, 8, 2840, e até 0 para a mesma consulta em execuções diferentes).
+
+**Por quê:** o endpoint mede logical reads consultando `sys.dm_exec_query_stats` — mas
+essa DMV é somada por **plano de execução em cache**, não por execução isolada. O código
+(`SqlStatisticsCapture.cs`) soma o `last_logical_reads` de **todas** as queries rodadas no
+servidor desde o início da medição, e:
+
+- se o plano da nossa query já estava em cache de uma chamada anterior, `last_logical_reads`
+  pode não ser atualizado na janela medida, aparecendo como 0;
+- se qualquer outra query rodar no servidor durante a medição (health check, outra
+  requisição, etc.), o número sai inflado, contando I/O que não é nosso.
+
+`SqlConnection.InfoMessage`, que seria o jeito "certo" de capturar a saída de
+`SET STATISTICS IO` a partir do C#, **não expõe essas mensagens** — é uma limitação
+conhecida do driver ADO.NET (`Microsoft.Data.SqlClient`), documentada no código.
+
+**Como obter um número confiável de fato:** rodar a query isolada manualmente com
+`SET STATISTICS IO ON` num cliente SQL (`sqlcmd`, SSMS, Azure Data Studio) — é assim que
+os números da seção "Consulta ruim" / "Consulta otimizada" acima foram coletados (via
+`database/scripts/03-bad-queries.sql` e `04-optimized-queries.sql`), e por isso eles são
+limpos (9.593 vs 10) enquanto os do endpoint `/benchmark` não são.
+
 ## Método usado
 
 1. Rodar a query em um cliente SQL (`sqlcmd`, SSMS ou Azure Data Studio) com
