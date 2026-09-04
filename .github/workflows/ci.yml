@@ -63,21 +63,19 @@ jobs:
         with:
           dotnet-version: '8.0.x'
 
-      - name: Aplicar schema e índices
+      - name: Instalar sqlcmd
         run: |
-          docker run --rm --network host \
-            -v ${{ github.workspace }}/database/scripts:/scripts \
-            mcr.microsoft.com/mssql-tools18 \
-            /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Your_password123' -C \
-            -i /scripts/01-create-tables.sql
+          curl -sSL https://packages.microsoft.com/keys/microsoft.asc | sudo tee /etc/apt/trusted.gpg.d/microsoft.asc
+          curl -sSL https://packages.microsoft.com/config/ubuntu/22.04/prod.list | sudo tee /etc/apt/sources.list.d/mssql-release.list
+          sudo apt-get update
+          sudo ACCEPT_EULA=Y apt-get install -y mssql-tools18 unixodbc-dev
+          echo "/opt/mssql-tools18/bin" >> "$GITHUB_PATH"
+
+      - name: Aplicar schema e índices
+        run: sqlcmd -S localhost -U sa -P 'Your_password123' -C -i database/scripts/01-create-tables.sql
 
       - name: Seed de dados (versão reduzida para CI)
-        run: |
-          docker run --rm --network host \
-            -v ${{ github.workspace }}/database/scripts:/scripts \
-            mcr.microsoft.com/mssql-tools18 \
-            /opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'Your_password123' -C \
-            -i /scripts/02-seed-data-ci.sql
+        run: sqlcmd -S localhost -U sa -P 'Your_password123' -C -i database/scripts/02-seed-data-ci.sql
 
       - name: Restore dependências
         run: dotnet restore Tests/Tests.csproj
