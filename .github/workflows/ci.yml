@@ -89,3 +89,35 @@ jobs:
 
       - name: Testes de integração
         run: dotnet test Tests/Tests.csproj --no-restore --configuration Release
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: [docker, test]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - name: Checkout código
+        uses: actions/checkout@v4
+
+      - name: Login no GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build e tag da imagem
+        run: |
+          docker build -f Api/Dockerfile \
+            -t ghcr.io/bieldev1/high-performance-orders-api:latest \
+            -t ghcr.io/bieldev1/high-performance-orders-api:${{ github.sha }} \
+            .
+
+      - name: Push da imagem
+        run: |
+          docker push ghcr.io/bieldev1/high-performance-orders-api:latest
+          docker push ghcr.io/bieldev1/high-performance-orders-api:${{ github.sha }}
