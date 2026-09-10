@@ -21,11 +21,15 @@ if (app.Environment.IsDevelopment())
     app.UseDocumentationConfiguration();
 }
 
-app.UseHttpsRedirection();
+// Sem UseHttpsRedirection: a API roda atrás de um proxy/ingress (Docker) que faz a
+// terminação TLS. Redirect de HTTPS aqui só gera o warning "Failed to determine the
+// https port" e não agrega em container.
 
 app.UseAuthorization();
 
 app.MapControllers();
+
+app.MapHealthChecks("/health");
 
 app.Run();
 
