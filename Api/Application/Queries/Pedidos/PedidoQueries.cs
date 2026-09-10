@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Api.Application.Models.Pedidos;
 using Domain.AggregatesModel.PedidoAggregate;
 using Infrastructure.Data;
@@ -8,14 +9,18 @@ namespace Api.Application.Queries.Pedidos;
 public class PedidoQueries : IPedidoQueries
 {
     private readonly AppDbContext context;
+    private readonly ILogger<PedidoQueries> logger;
 
-    public PedidoQueries(AppDbContext context)
+    public PedidoQueries(AppDbContext context, ILogger<PedidoQueries> logger)
     {
         this.context = context;
+        this.logger = logger;
     }
 
     public async Task<List<PedidoSlowModel>> GetSlowAsync(int page, int pageSize)
     {
+        var stopwatch = Stopwatch.StartNew();
+
         // Problema 1: OFFSET pagination — custo cresce conforme a página aumenta, pois o SQL Server
         // precisa varrer e descartar todas as linhas anteriores ao offset.
         var pedidos = await context.Pedidos
@@ -47,11 +52,18 @@ public class PedidoQueries : IPedidoQueries
             });
         }
 
+        stopwatch.Stop();
+        logger.LogInformation(
+            "GetSlow page={Page} pageSize={PageSize} -> {Count} pedidos em {ElapsedMs}ms ({QueryCount} round trips)",
+            page, pageSize, resultado.Count, stopwatch.ElapsedMilliseconds, 1 + pedidos.Count * 2);
+
         return resultado;
     }
 
     public async Task<List<PedidoFastModel>> GetFastAsync(long? lastId, int pageSize, StatusPedido? status)
     {
+        var stopwatch = Stopwatch.StartNew();
+
         var query = context.Pedidos.AsNoTracking().AsQueryable();
 
         // Filtro por Status antes de qualquer outra coisa: casa com a coluna líder do covering index
@@ -63,7 +75,7 @@ public class PedidoQueries : IPedidoQueries
         if (lastId.HasValue)
             query = query.Where(p => p.Id > lastId.Value);
 
-        return await query
+        var resultado = await query
             .OrderBy(p => p.Id)
             .Take(pageSize)
             .Select(p => new PedidoFastModel
@@ -77,6 +89,13 @@ public class PedidoQueries : IPedidoQueries
                 QuantidadeItens = context.ItensPedido.Count(i => i.PedidoId == p.Id)
             })
             .ToListAsync();
+
+        stopwatch.Stop();
+        logger.LogInformation(
+            "GetFast lastId={LastId} pageSize={PageSize} status={Status} -> {Count} pedidos em {ElapsedMs}ms (1 round trip)",
+            lastId, pageSize, status, resultado.Count, stopwatch.ElapsedMilliseconds);
+
+        return resultado;
     }
 
     public async Task<BenchmarkResultModel> BenchmarkAsync(int pageSize)
@@ -94,6 +113,12 @@ public class PedidoQueries : IPedidoQueries
             context.ChangeTracker.Clear();
             await GetFastAsync(lastId: null, pageSize, status: null);
         });
+
+        logger.LogInformation(
+            "Benchmark pageSize={PageSize} -> slow: {SlowMs}ms/{SlowReads} reads | fast: {FastMs}ms/{FastReads} reads",
+            pageSize,
+            resultado.SlowQuery.ExecutionTimeMs, resultado.SlowQuery.LogicalReads,
+            resultado.OptimizedQuery.ExecutionTimeMs, resultado.OptimizedQuery.LogicalReads);
 
         return resultado;
     }
