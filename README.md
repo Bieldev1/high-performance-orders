@@ -1,5 +1,9 @@
 # High Performance Orders API
 
+[![CI](https://github.com/Bieldev1/high-performance-orders/actions/workflows/ci.yml/badge.svg)](https://github.com/Bieldev1/high-performance-orders/actions/workflows/ci.yml)
+[![GHCR](https://img.shields.io/badge/ghcr.io-high--performance--orders--api-blue?logo=docker)](https://github.com/Bieldev1/high-performance-orders/pkgs/container/high-performance-orders-api)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
 Projeto de estudo e portfólio focado em performance de queries SQL Server, análise de
 execution plan e otimização com EF Core, usando uma API .NET 8 que simula um sistema de
 pedidos (e-commerce). Todo o domínio é em português (`Pedido`, `Cliente`, `ItemPedido`),
@@ -116,12 +120,17 @@ Os planos de execução reais dessas queries estão em [`docs/execution-plans/`]
 | `build` | `dotnet restore` + `build` em Release (com cache de pacotes NuGet) |
 | `test` | Sobe um SQL Server efêmero (service container), aplica schema + seed reduzido, roda os testes de integração reais |
 | `docker` | Valida que `Api/Dockerfile` builda |
-| `publish` | **Só em push para `main`**: builda e publica a imagem em `ghcr.io/bieldev1/high-performance-orders-api` (tags `:latest` e `:<sha>`) |
+| `publish` | **Só em push para `main`**: builda e publica a imagem no [GitHub Container Registry](https://github.com/Bieldev1/high-performance-orders/pkgs/container/high-performance-orders-api) (tags `:latest` e `:<sha>`) |
 
 `main` tem branch protection: exige os 3 checks (`build`/`test`/`docker`) verdes, sem force-push, aplicável a admins — merge só via Pull Request.
 
+Imagem publicada: **[`ghcr.io/bieldev1/high-performance-orders-api`](https://github.com/Bieldev1/high-performance-orders/pkgs/container/high-performance-orders-api)**
+
 ```bash
 docker pull ghcr.io/bieldev1/high-performance-orders-api:latest
+docker run --rm -p 8080:8080 \
+  -e ConnectionStrings__DefaultConnection="Server=host.docker.internal,1433;Database=HighPerformanceOrders;User Id=sa;Password=Your_password123;TrustServerCertificate=True;" \
+  ghcr.io/bieldev1/high-performance-orders-api:latest
 ```
 
 ## Git Flow
