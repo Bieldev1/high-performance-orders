@@ -14,6 +14,10 @@ public static class DependencyInjectionConfigurations
         services.AddScoped<IPedidoQueries, PedidoQueries>();
         services.AddScoped<IPedidoDapperQueries, PedidoDapperQueries>();
 
+        // /health = readiness: só responde 200 se a API sobe E consegue falar com o banco.
+        services.AddHealthChecks()
+            .AddDbContextCheck<AppDbContext>(name: "sqlserver");
+
         return services;
     }
 }
