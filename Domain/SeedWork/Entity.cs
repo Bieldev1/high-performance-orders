@@ -2,7 +2,7 @@ namespace Domain.SeedWork;
 
 public abstract class Entity : IEntity
 {
-    public override bool Equals(object obj)
+    public override bool Equals(object? obj)
     {
         if (obj is null or not Entity)
             return false;
@@ -18,7 +18,7 @@ public abstract class Entity : IEntity
 
     public override int GetHashCode() => base.GetHashCode();
 
-    public static bool operator ==(Entity left, Entity right)
+    public static bool operator ==(Entity? left, Entity? right)
     {
         if (left is null)
             return right is null;
@@ -26,5 +26,5 @@ public abstract class Entity : IEntity
         return left.Equals(right);
     }
 
-    public static bool operator !=(Entity left, Entity right) => !(left == right);
+    public static bool operator !=(Entity? left, Entity? right) => !(left == right);
 }

@@ -21,16 +21,18 @@ HighPerformanceOrders.sln
 │   ├── Application/
 │   │   ├── Queries/          (PedidoQueries, PedidoDapperQueries)
 │   │   └── Models/           (Models de request/response, sufixo *Model)
-│   └── Configurations/       (DI, Swagger)
+│   └── Configurations/       (DI, Swagger, GlobalExceptionHandler)
 ├── Domain/                   (sem dependências externas)
 │   ├── AggregatesModel/      (PedidoAggregate, ClienteAggregate)
 │   └── SeedWork/             (Entity, IAggregateRoot)
-└── Infrastructure/
-    ├── Data/                 (AppDbContext, EntityConfigurations)
-    └── Migrations/
+├── Infrastructure/
+│   ├── Data/                 (AppDbContext, EntityConfigurations)
+│   └── Migrations/
+└── Tests/                    (testes de integração — xUnit + WebApplicationFactory)
 
 database/scripts/             (schema + índices + seed + queries de estudo, em SQL puro)
-docs/                         (system design, benchmarks, estratégia de índices, conceitos)
+docs/                         (system design, benchmarks, estratégia de índices, conceitos, planos de execução)
+.github/workflows/ci.yml      (CI: build + testes + docker; CD: publish da imagem no GHCR)
 ```
 
 > Este projeto é só leitura (endpoints de estudo de performance) — por isso não há
@@ -82,6 +84,9 @@ Todos em `/api/pedidos`:
 | `GET /fast-dapper?...` | Mesma consulta otimizada, via Dapper/SQL puro — comparação EF Core vs Dapper |
 | `GET /benchmark?pageSize=20` | Roda slow vs fast e mede tempo real + logical reads |
 
+Erros não tratados retornam `ProblemDetails` (RFC 7807) com um `traceId` que aparece
+também no log da API, para correlação.
+
 ## Banco de dados
 
 `database/scripts/`:
@@ -90,6 +95,9 @@ Todos em `/api/pedidos`:
 2. `02-seed-data.sql` — gera ~5.000 clientes, ~500.000 pedidos e ~1.000.000 itens, 100% set-based
 3. `03-bad-queries.sql` — a consulta lenta, pra rodar manualmente com `SET STATISTICS IO/TIME ON` e ver o Table Scan
 4. `04-optimized-queries.sql` — a versão otimizada, pra comparar
+5. `02-seed-data-ci.sql` — seed reduzido (~500 pedidos) usado só pelo pipeline de CI
+
+Os planos de execução reais dessas queries estão em [`docs/execution-plans/`](docs/execution-plans/) (`.sqlplan`, abrem no SSMS).
 
 ## Documentação
 
@@ -97,15 +105,33 @@ Todos em `/api/pedidos`:
 - [docs/benchmarks.md](docs/benchmarks.md) — números reais coletados (logical reads, tempo de execução, EF Core vs Dapper)
 - [docs/index-strategy.md](docs/index-strategy.md) — por que cada índice existe, ordem das colunas, trade-offs
 - [docs/concepts/](docs/concepts) — indexing, covering index, execution plan, N+1, paginação (OFFSET vs keyset)
+- [docs/execution-plans/](docs/execution-plans) — planos de execução reais (`.sqlplan`) + leitura operador a operador
+
+## CI / CD
+
+`.github/workflows/ci.yml`, disparado em push e pull request para `main`/`develop`:
+
+| Job | O que faz |
+|---|---|
+| `build` | `dotnet restore` + `build` em Release (com cache de pacotes NuGet) |
+| `test` | Sobe um SQL Server efêmero (service container), aplica schema + seed reduzido, roda os testes de integração reais |
+| `docker` | Valida que `Api/Dockerfile` builda |
+| `publish` | **Só em push para `main`**: builda e publica a imagem em `ghcr.io/bieldev1/high-performance-orders-api` (tags `:latest` e `:<sha>`) |
+
+`main` tem branch protection: exige os 3 checks (`build`/`test`/`docker`) verdes, sem force-push, aplicável a admins — merge só via Pull Request.
+
+```bash
+docker pull ghcr.io/bieldev1/high-performance-orders-api:latest
+```
 
 ## Git Flow
 
-- `main` → produção (estável)
+- `main` → produção (estável, protegida — merge só via PR com CI verde)
 - `develop` → integração
 - `feature/*` → novas funcionalidades, criadas a partir de `develop`
 
-Commits semânticos: `feat:`, `perf:`, `fix:`, `docs:`, `refactor:`.
+Commits semânticos: `feat:`, `perf:`, `fix:`, `docs:`, `refactor:`, `ci:`, `test:`, `chore:`.
 
-## Status
+## Licença
 
-🚧 Em construção — montado passo a passo. Próximos passos: CI/CD via GitHub Actions.
+[MIT](LICENSE).
