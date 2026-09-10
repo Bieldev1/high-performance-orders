@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Api.Application.Models.Pedidos;
 using Dapper;
 using Domain.AggregatesModel.PedidoAggregate;
@@ -8,15 +9,19 @@ namespace Api.Application.Queries.Pedidos;
 public class PedidoDapperQueries : IPedidoDapperQueries
 {
     private readonly string connectionString;
+    private readonly ILogger<PedidoDapperQueries> logger;
 
-    public PedidoDapperQueries(IConfiguration configuration)
+    public PedidoDapperQueries(IConfiguration configuration, ILogger<PedidoDapperQueries> logger)
     {
         connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' não configurada.");
+        this.logger = logger;
     }
 
     public async Task<List<PedidoFastModel>> GetFastAsync(long? lastId, int pageSize, StatusPedido? status)
     {
+        var stopwatch = Stopwatch.StartNew();
+
         // Mesma estratégia do EF (keyset pagination pelo Id + filtro por Status casando com o covering index),
         // aqui em SQL puro para comparar o overhead de tracking/materialização do EF Core.
         var sql = @"
@@ -41,6 +46,13 @@ public class PedidoDapperQueries : IPedidoDapperQueries
             LastId = lastId
         });
 
-        return pedidos.AsList();
+        var resultado = pedidos.AsList();
+
+        stopwatch.Stop();
+        logger.LogInformation(
+            "GetFast (Dapper) lastId={LastId} pageSize={PageSize} status={Status} -> {Count} pedidos em {ElapsedMs}ms",
+            lastId, pageSize, status, resultado.Count, stopwatch.ElapsedMilliseconds);
+
+        return resultado;
     }
 }

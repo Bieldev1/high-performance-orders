@@ -1,0 +1,5 @@
+* text=auto eol=lf
+
+*.sqlplan text eol=lf
+*.sql text eol=lf
+*.sln text eol=crlf
