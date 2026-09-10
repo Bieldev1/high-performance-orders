@@ -8,7 +8,12 @@ builder.Services.AddControllers();
 builder.Services.AddDocumentationConfiguration();
 builder.Services.AddDependencyInjectionConfiguration(builder.Configuration);
 
+builder.Services.AddExceptionHandler<GlobalExceptionHandler>();
+builder.Services.AddProblemDetails();
+
 var app = builder.Build();
+
+app.UseExceptionHandler();
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
