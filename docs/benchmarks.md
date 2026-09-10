@@ -7,6 +7,10 @@ contra a base já populada por `02-seed-data.sql` (5.000 clientes, 500.000 pedid
 com **"Include Actual Execution Plan"** ligado — é a forma mais direta de ver o Table
 Scan e os Key Lookups da consulta ruim virarem Index Seeks na otimizada.
 
+> Os planos de execução reais já estão exportados em
+> [`docs/execution-plans/`](execution-plans/) (arquivos `.sqlplan`, abrem no SSMS/ADS) —
+> ver o [README de lá](execution-plans/README.md) para a leitura operador a operador.
+
 ## Consulta "ruim" (`03-bad-queries.sql`)
 
 Lista pedidos com cliente e itens via `JOIN`, ordenando por `DataPedido` (não é coluna
